@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1E20;
+    --panel: #24282B;
+    --panel-raised: #2C3134;
+    --line: #383E42;
+    --text: #EDEEF0;
+    --text-dim: #9AA1A6;
+    --amber: #F0A202;
+    --amber-dim: #7A5613;
+    --steel: #5B8FAE;
+    --steel-dim: #2C4757;
+    --green: #6FA36E;
+    --green-dim: #2E4A2D;
+    --red: #C4573A;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  h1, h2, h3, .num {
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+  #app { max-width: 520px; margin: 0 auto; padding-bottom: 48px; }
+
+  /* Header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 16px 12px;
+  }
+  header .row { display: flex; align-items: baseline; justify-content: space-between; }
+  header h1 {
+    font-size: 26px; font-weight: 700; margin: 0;
+    letter-spacing: 0.2px;
+  }
+  header .sub { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+  header .count {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px; font-weight: 600; color: var(--amber);
+  }
+  header .count-label { font-size: 11px; color: var(--text-dim); text-align: right; margin-top: -2px; }
+
+  /* Pending tasks */
+  #pending-section { margin: 14px 16px 0; }
+  #pending-section .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px 8px;
+  }
+  #pending-section h2 {
+    font-size: 18px; font-weight: 600; margin: 0; letter-spacing: 0.2px;
+  }
+  .pending-count {
+    font-size: 12px; color: var(--text-dim); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px;
+  }
+  .pending-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-left: 3px solid var(--amber);
+    border-radius: 5px; padding: 12px 14px; margin-bottom: 9px;
+  }
+  .pending-card.urgent { border-left-color: var(--red); }
+  .pending-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .pending-dept { font-size: 11.5px; color: var(--amber); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .urgent-badge {
+    font-size: 11px; font-weight: 700; color: var(--red);
+    border: 1px solid var(--red); border-radius: 20px; padding: 2px 9px;
+  }
+  .pending-type { font-size: 15px; font-weight: 600; margin: 4px 0 2px; }
+  .pending-detail { font-size: 13.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .pending-desc { font-size: 13.5px; margin-bottom: 8px; }
+  .pending-footer { display: flex; justify-content: space-between; align-items: center; }
+  .pending-time { font-size: 11.5px; color: var(--text-dim); }
+  .start-btn {
+    background: var(--amber); color: #1B1E20; border: none;
+    border-radius: 5px; padding: 6px 14px; font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+  }
+  #pending-empty {
+    text-align: center; color: var(--text-dim); font-size: 13px;
+    padding: 14px 10px 4px;
+  }
+
+  /* Form */
+  #entry-panel {
+    margin: 14px 16px 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  #entry-toggle {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px; background: none; border: none; cursor: pointer;
+    color: var(--text); font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 600;
+  }
+  #entry-toggle .plus {
+    color: var(--amber); font-size: 20px; transition: transform 0.15s ease;
+  }
+  #entry-toggle.open .plus { transform: rotate(45deg); }
+  #entry-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.22s ease;
+  }
+  #entry-body.open { max-height: 900px; }
+  #entry-form { padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 13px; }
+
+  .field label {
+    display: block; font-size: 12px; color: var(--text-dim);
+    margin-bottom: 5px; font-weight: 500;
+  }
+  input[type=text], input[type=datetime-local], select, textarea {
+    width: 100%; background: var(--panel-raised); border: 1px solid var(--line);
+    color: var(--text); border-radius: 5px; padding: 10px 11px; font-size: 15px;
+    font-family: 'Inter', sans-serif;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--amber);
+  }
+  textarea { resize: vertical; min-height: 54px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  #crew-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px;
+  }
+  #crew-chips:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--steel-dim); color: var(--text);
+    border: 1px solid var(--steel); border-radius: 20px;
+    padding: 4px 6px 4px 12px; font-size: 13.5px;
+  }
+  .chip button {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 15px; line-height: 1; cursor: pointer; padding: 3px 5px;
+  }
+  .crew-select-btn {
+    width: 100%; text-align: left; background: var(--panel-raised);
+    border: 1px solid var(--line); color: var(--text); border-radius: 5px;
+    padding: 10px 11px; font-size: 15px; font-family: 'Inter', sans-serif;
+    cursor: pointer; position: relative;
+  }
+  .crew-select-btn::after {
+    content: '▾'; position: absolute; right: 12px; color: var(--text-dim);
+  }
+  .crew-options {
+    display: none; margin-top: 6px; background: var(--panel-raised);
+    border: 1px solid var(--line); border-radius: 5px; overflow: hidden;
+  }
+  .crew-options.open { display: block; }
+  .crew-option {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    font-size: 14.5px; border-bottom: 1px solid var(--line); cursor: pointer;
+  }
+  .crew-option:last-child { border-bottom: none; }
+  .crew-option input { width: 17px; height: 17px; accent-color: var(--amber); }
+  .crew-error {
+    display: none; color: var(--red); font-size: 12px; margin-top: 5px;
+  }
+  .crew-error.show { display: block; }
+
+  .submit-btn {
+    margin-top: 4px; background: var(--amber); color: #1B1E20; border: none;
+    border-radius: 5px; padding: 12px; font-size: 15.5px; font-weight: 700;
+    cursor: pointer; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.3px;
+  }
+  .submit-btn:active { opacity: 0.85; }
+
+  /* Filters */
+  #filters {
+    display: flex; gap: 8px; padding: 14px 16px 4px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  #filters::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0; background: var(--panel); border: 1px solid var(--line);
+    color: var(--text-dim); border-radius: 20px; padding: 6px 13px;
+    font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .filter-chip.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+  /* Log list */
+  #log-list { padding: 8px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .entry {
+    background: var(--panel); border: 1px solid var(--line);
+    border-left: 3px solid var(--steel);
+    border-radius: 5px; padding: 12px 14px;
+  }
+  .entry.completed { border-left-color: var(--green); }
+  .entry.clickable { cursor: pointer; }
+  .entry.clickable:active { background: var(--panel-raised); }
+  .entry-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .entry-dept { font-size: 11.5px; color: var(--amber); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .entry-desc { font-size: 15px; margin: 3px 0 8px; }
+  .entry-crew { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .block-list { margin: 4px 0 8px; }
+  .block-row {
+    display: flex; justify-content: space-between; gap: 10px;
+    font-size: 12.5px; color: var(--text-dim); padding: 4px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .block-row:last-child { border-bottom: none; }
+  .block-row .num { color: var(--text); font-weight: 500; }
+  .block-row.open .num { color: var(--steel); }
+  .entry-total {
+    font-size: 13px; color: var(--text-dim); margin-bottom: 8px;
+    padding-top: 4px;
+  }
+  .entry-total .num { color: var(--text); font-weight: 600; }
+  .manhours-stat {
+    background: var(--amber-dim); border: 1px solid var(--amber);
+    border-radius: 5px; padding: 8px 12px; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .manhours-stat .label { font-size: 12px; color: var(--text-dim); }
+  .manhours-stat .value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 600; color: var(--amber); }
+  .entry-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .add-block-btn {
+    background: none; border: 1px solid var(--steel); color: var(--steel);
+    border-radius: 5px; padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  .block-form {
+    display: none; margin-top: 10px; padding: 11px; background: var(--panel-raised);
+    border: 1px solid var(--line); border-radius: 5px;
+  }
+  .block-form.open { display: block; }
+  .block-form .two-col { margin-bottom: 9px; }
+  .block-form .field label { font-size: 11.5px; }
+  .block-form-actions { display: flex; gap: 8px; }
+  .save-block-btn {
+    background: var(--steel); color: #12181C; border: none; border-radius: 5px;
+    padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  }
+  .cancel-block-btn {
+    background: none; border: 1px solid var(--line); color: var(--text-dim);
+    border-radius: 5px; padding: 7px 14px; font-size: 12.5px; cursor: pointer;
+  }
+  .entry-times { font-size: 12.5px; color: var(--text-dim); display: flex; gap: 14px; flex-wrap: wrap; }
+  .entry-times .num { color: var(--text); font-weight: 500; }
+  .entry-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .status-pill {
+    font-size: 11.5px; padding: 3px 10px; border-radius: 20px; font-weight: 600;
+  }
+  .status-pill.active { background: var(--steel-dim); color: var(--steel); }
+  .status-pill.done { background: var(--green-dim); color: var(--green); }
+  .complete-btn {
+    background: none; border: 1px solid var(--line); color: var(--text-dim);
+    border-radius: 5px; padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+  }
+  .complete-btn.mark-done { border-color: var(--green); color: var(--green); }
+  .complete-btn.reopen { border-color: var(--text-dim); }
+
+  #empty-state {
+    text-align: center; color: var(--text-dim); padding: 50px 20px; font-size: 14px;
+  }
+  #empty-state .big { font-size: 34px; margin-bottom: 8px; }
+
+  .sync-note {
+    text-align: center; color: var(--text-dim); font-size: 11.5px;
+    padding: 18px 30px 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="row">
+      <div>
+        <h1>Job Log</h1>
+        <div class="sub">Stacor Maintenance &amp; Construction</div>
+      </div>
+      <div>
+        <div class="count" id="active-count">0</div>
+        <div class="count-label">in progress</div>
+      </div>
+    </div>
+  </header>
+
+  <div id="pending-section">
+    <div class="section-head">
+      <h2>Tasks awaiting assignment</h2>
+      <span class="pending-count" id="pending-count">0</span>
+    </div>
+    <div id="pending-list"></div>
+  </div>
+
+  <div id="entry-panel">
+    <button id="entry-toggle" class="open">
+      <span>New entry</span>
+      <span class="plus">+</span>
+    </button>
+    <div id="entry-body" class="open">
+      <form id="entry-form">
+        <div class="field">
+          <label for="department">Department</label>
+          <select id="department" required>
+            <option value="" disabled selected>Choose department</option>
+            <option>Wax</option>
+            <option>Petroleum Jelly</option>
+            <option>White Oil</option>
+            <option>Lubricants 1</option>
+            <option>Lubricants 2</option>
+            <option>Construction Chemicals</option>
+            <option>Loading Bay</option>
+            <option>Stacor 2 A Block</option>
+            <option>Stacor 2 B Block</option>
+            <option>General / Workshop</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="crew-toggle">Staff on this task</label>
+          <div id="crew-chips"></div>
+          <button type="button" id="crew-toggle" class="crew-select-btn">Select staff</button>
+          <div id="crew-options" class="crew-options">
+            <label class="crew-option"><input type="checkbox" value="Bonginkosi"> Bonginkosi</label>
+            <label class="crew-option"><input type="checkbox" value="Njabulo"> Njabulo</label>
+            <label class="crew-option"><input type="checkbox" value="John"> John</label>
+            <label class="crew-option"><input type="checkbox" value="Michael"> Michael</label>
+          </div>
+          <div id="crew-error" class="crew-error">Select at least one person.</div>
+        </div>
+
+        <div class="field">
+          <label for="description">What's the job</label>
+          <textarea id="description" placeholder="Short description of the task" required></textarea>
+        </div>
+
+        <div class="two-col">
+          <div class="field">
+            <label for="start-time">Started</label>
+            <input type="datetime-local" id="start-time" required>
+          </div>
+          <div class="field">
+            <label for="end-time">Finished (leave blank if still working)</label>
+            <input type="datetime-local" id="end-time">
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">Log time</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="filters"></div>
+
+  <div id="log-list"></div>
+  <div id="empty-state" style="display:none;">
+    <div class="big">🔧</div>
+    No entries yet — log your first job above.
+  </div>
+
+  <div class="sync-note">Entries are shared with your team and sync across everyone using this log.</div>
+</div>
+
+<script>
+// --- Connect this to your Google Apps Script Web App ---
+// Deploy the Code.gs backend, then paste the Web App URL here.
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+if (API_URL.indexOf('PASTE_') === 0) {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#C4573A;color:#fff;padding:10px 16px;font-size:13px;text-align:center;">Not connected — set API_URL in the code to your deployed Apps Script URL.</div>');
+}
+
+async function apiGet(action) {
+  const res = await fetch(`${API_URL}?action=${action}`);
+  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  return res.json();
+}
+async function apiPost(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  return res.json();
+}
+
+let entries = [];
+let pendingTasks = [];
+let activePendingId = null;
+let crew = [];
+let deptFilter = 'All';
+let statusFilter = 'All';
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function nowLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {month:'short', day:'numeric'}) + ' · ' + d.toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
+}
+function durationMs(start, end) {
+  if (!start || !end) return null;
+  const ms = new Date(end) - new Date(start);
+  return ms >= 0 ? ms : null;
+}
+function fmtDuration(ms) {
+  if (ms == null) return null;
+  const mins = Math.round(ms / 60000);
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return (h > 0 ? h + 'h ' : '') + m + 'm';
+}
+function totalBlocksMs(blocks) {
+  return (blocks || []).reduce((sum, b) => sum + (durationMs(b.start, b.end) || 0), 0);
+}
+
+async function loadEntries() {
+  try {
+    entries = await apiGet('entries');
+  } catch (e) {
+    console.error('Load failed', e);
+  }
+  render();
+}
+
+async function loadPendingTasks() {
+  try {
+    pendingTasks = await apiGet('pending');
+  } catch (e) {
+    console.error('Load failed', e);
+  }
+  renderPending();
+}
+
+function renderPending() {
+  const list = document.getElementById('pending-list');
+  const empty = document.getElementById('pending-empty');
+  document.getElementById('pending-count').textContent = pendingTasks.length;
+  list.innerHTML = '';
+
+  if (pendingTasks.length === 0) {
+    list.innerHTML = '<div id="pending-empty">No tasks waiting — queue is clear.</div>';
+    return;
+  }
+
+  const sorted = pendingTasks.slice().sort((a, b) => {
+    if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  sorted.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'pending-card' + (t.urgent ? ' urgent' : '');
+    let detail = '';
+    if (t.type === 'Tank' && t.tankEmpty) detail = `Tank empty: ${t.tankEmpty}`;
+    if (t.type === 'Other' && t.otherDetail) detail = t.otherDetail;
+    card.innerHTML = `
+      <div class="pending-top">
+        <div class="pending-dept">${t.department}</div>
+        ${t.urgent ? '<span class="urgent-badge">Urgent</span>' : ''}
+      </div>
+      <div class="pending-type">${t.type}</div>
+      ${detail ? `<div class="pending-detail">${detail}</div>` : ''}
+      ${t.description ? `<div class="pending-desc">${t.description}</div>` : ''}
+      <div class="pending-footer">
+        <span class="pending-time">${t.requestedBy ? `${t.requestedBy} · ` : ''}${fmtTime(t.createdAt)}</span>
+        <button class="start-btn" data-id="${t.id}">Start</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('.start-btn').forEach(btn => {
+    btn.onclick = () => {
+      const task = pendingTasks.find(x => x.id === btn.dataset.id);
+      if (!task) return;
+      activePendingId = task.id;
+
+      document.getElementById('department').value = task.department;
+      let desc = task.type;
+      if (task.type === 'Tank' && task.tankEmpty) desc += ` — empty: ${task.tankEmpty}`;
+      if (task.type === 'Other' && task.otherDetail) desc += ` — ${task.otherDetail}`;
+      if (task.description) desc += `. ${task.description}`;
+      document.getElementById('description').value = desc;
+
+      document.getElementById('entry-toggle').classList.add('open');
+      document.getElementById('entry-body').classList.add('open');
+      document.getElementById('entry-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  });
+}
+
+function renderChips() {
+  const wrap = document.getElementById('crew-chips');
+  wrap.innerHTML = '';
+  crew.forEach((name, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.innerHTML = '<span></span><button type="button">×</button>';
+    chip.querySelector('span').textContent = name;
+    chip.querySelector('button').onclick = () => {
+      const box = document.querySelector(`#crew-options input[value="${name}"]`);
+      if (box) box.checked = false;
+      crew.splice(i, 1);
+      renderChips();
+      document.getElementById('crew-toggle').textContent = crew.length ? crew.join(', ') : 'Select staff';
+    };
+    wrap.appendChild(chip);
+  });
+}
+
+function syncCrewFromCheckboxes() {
+  const checked = Array.from(document.querySelectorAll('#crew-options input:checked'));
+  crew = checked.map(c => c.value);
+  renderChips();
+  document.getElementById('crew-toggle').textContent =
+    crew.length ? crew.join(', ') : 'Select staff';
+  if (crew.length) document.getElementById('crew-error').classList.remove('show');
+}
+
+function renderFilters() {
+  const depts = ['All', ...new Set(entries.map(e => e.department))];
+  const wrap = document.getElementById('filters');
+  wrap.innerHTML = '';
+
+  const statusWrap = document.createElement('div');
+  statusWrap.style.display = 'flex';
+  statusWrap.style.gap = '8px';
+  ['All', 'Active', 'Completed'].forEach(s => {
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip' + (statusFilter === s ? ' active' : '');
+    chip.textContent = s;
+    chip.onclick = () => { statusFilter = s; render(); };
+    wrap.appendChild(chip);
+  });
+
+  if (depts.length > 1) {
+    const divider = document.createElement('div');
+    divider.style.width = '1px';
+    divider.style.background = 'var(--line)';
+    divider.style.flexShrink = '0';
+    wrap.appendChild(divider);
+    depts.forEach(d => {
+      const chip = document.createElement('button');
+      chip.className = 'filter-chip' + (deptFilter === d ? ' active' : '');
+      chip.textContent = d;
+      chip.onclick = () => { deptFilter = d; render(); };
+      wrap.appendChild(chip);
+    });
+  }
+}
+
+function render() {
+  renderFilters();
+
+  let visible = entries.slice().sort((a,b) => new Date(b.blocks[0].start) - new Date(a.blocks[0].start));
+  if (deptFilter !== 'All') visible = visible.filter(e => e.department === deptFilter);
+  if (statusFilter === 'Active') visible = visible.filter(e => !e.completed);
+  if (statusFilter === 'Completed') visible = visible.filter(e => e.completed);
+
+  document.getElementById('active-count').textContent = entries.filter(e => !e.completed).length;
+
+  const list = document.getElementById('log-list');
+  const empty = document.getElementById('empty-state');
+  list.innerHTML = '';
+
+  if (entries.length === 0) {
+    empty.style.display = 'block';
+    empty.querySelector('div') ? null : null;
+    return;
+  }
+  empty.style.display = 'none';
+
+  if (visible.length === 0) {
+    const msg = document.createElement('div');
+    msg.id = '';
+    msg.style.textAlign = 'center';
+    msg.style.color = 'var(--text-dim)';
+    msg.style.padding = '30px 20px';
+    msg.style.fontSize = '13.5px';
+    msg.textContent = 'No entries match this filter.';
+    list.appendChild(msg);
+    return;
+  }
+
+  visible.forEach(e => {
+    const card = document.createElement('div');
+    card.className = 'entry' + (e.completed ? ' completed' : '');
+    const totalMs = totalBlocksMs(e.blocks);
+    const openBlock = e.blocks.length && !e.blocks[e.blocks.length - 1].end;
+
+    const blockRows = e.blocks.map(b => {
+      const bMs = durationMs(b.start, b.end);
+      return `
+        <div class="block-row${!b.end ? ' open' : ''}">
+          <span>${fmtTime(b.start)} – ${b.end ? fmtTime(b.end) : 'In progress'}</span>
+          <span class="num">${bMs != null ? fmtDuration(bMs) : ''}</span>
+        </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="entry-top">
+        <div class="entry-dept">${e.department}</div>
+        <span class="status-pill ${e.completed ? 'done' : 'active'}">${e.completed ? 'Completed' : 'In progress'}</span>
+      </div>
+      <div class="entry-desc">${e.description}</div>
+      ${e.crew.length ? `<div class="entry-crew">${e.crew.join(', ')}</div>` : ''}
+      <div class="block-list">${blockRows}</div>
+      <div class="entry-total">Total time <span class="num">${totalMs > 0 ? fmtDuration(totalMs) : '—'}</span></div>
+      ${e.completed && e.manHours != null ? `
+        <div class="manhours-stat">
+          <span class="label">Manhours (${e.crew.length} ${e.crew.length === 1 ? 'person' : 'people'})</span>
+          <span class="value">${e.manHours}</span>
+        </div>` : ''}
+      <div class="block-form" id="block-form-${e.id}">
+        <div class="two-col">
+          <div class="field">
+            <label>Block start</label>
+            <input type="datetime-local" class="new-block-start">
+          </div>
+          <div class="field">
+            <label>Block end</label>
+            <input type="datetime-local" class="new-block-end">
+          </div>
+        </div>
+        <div class="block-form-actions">
+          <button type="button" class="save-block-btn" data-id="${e.id}">Save block</button>
+          <button type="button" class="cancel-block-btn" data-id="${e.id}">Cancel</button>
+        </div>
+      </div>
+      <div class="entry-actions">
+        ${!e.completed ? `<button class="add-block-btn" data-id="${e.id}">Add time block</button>` : ''}
+        <button class="complete-btn ${e.completed ? 'reopen' : 'mark-done'}" data-id="${e.id}">
+          ${e.completed ? 'Reopen' : 'Mark complete'}
+        </button>
+      </div>
+    `;
+    list.appendChild(card);
+
+    if (!e.completed) {
+      card.classList.add('clickable');
+      card.addEventListener('click', (evt) => {
+        if (evt.target.closest('button, input, .block-form')) return;
+        document.getElementById(`block-form-${e.id}`).classList.toggle('open');
+      });
+    }
+  });
+
+  list.querySelectorAll('.add-block-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.getElementById(`block-form-${btn.dataset.id}`).classList.add('open');
+    };
+  });
+
+  list.querySelectorAll('.cancel-block-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.getElementById(`block-form-${btn.dataset.id}`).classList.remove('open');
+    };
+  });
+
+  list.querySelectorAll('.save-block-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const entry = entries.find(x => x.id === id);
+      if (!entry) return;
+      const form = document.getElementById(`block-form-${id}`);
+      const start = form.querySelector('.new-block-start').value;
+      const end = form.querySelector('.new-block-end').value;
+      if (!start) { alert('Enter a start time for this block.'); return; }
+      if (end && new Date(end) < new Date(start)) { alert('End time is before the start time.'); return; }
+
+      entry.blocks.push({ start, end: end || null });
+      form.classList.remove('open');
+      render();
+      try {
+        await apiPost({ action: 'updateEntry', id, updates: { blocks: entry.blocks } });
+      } catch (e) {
+        console.error('Update failed', e);
+      }
+    };
+  });
+
+  list.querySelectorAll('.complete-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const id = btn.dataset.id;
+      const entry = entries.find(x => x.id === id);
+      if (!entry) return;
+      entry.completed = !entry.completed;
+
+      if (entry.completed) {
+        const last = entry.blocks[entry.blocks.length - 1];
+        if (last && !last.end) last.end = nowLocal();
+        const hours = totalBlocksMs(entry.blocks) / 3600000;
+        entry.manHours = Math.round(hours * entry.crew.length * 100) / 100;
+      }
+
+      render();
+      try {
+        await apiPost({
+          action: 'updateEntry', id,
+          updates: { completed: entry.completed, blocks: entry.blocks, manHours: entry.manHours }
+        });
+      } catch (e) {
+        console.error('Update failed', e);
+      }
+    };
+  });
+}
+
+document.getElementById('crew-toggle').onclick = () => {
+  document.getElementById('crew-toggle').classList.toggle('open');
+  document.getElementById('crew-options').classList.toggle('open');
+};
+document.querySelectorAll('#crew-options input').forEach(box => {
+  box.addEventListener('change', syncCrewFromCheckboxes);
+});
+
+document.getElementById('entry-toggle').onclick = () => {
+  document.getElementById('entry-toggle').classList.toggle('open');
+  document.getElementById('entry-body').classList.toggle('open');
+};
+
+document.getElementById('entry-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const department = document.getElementById('department').value;
+  const description = document.getElementById('description').value.trim();
+  const start = document.getElementById('start-time').value;
+  const end = document.getElementById('end-time').value || null;
+
+  if (!crew.length) {
+    document.getElementById('crew-error').classList.add('show');
+    document.getElementById('crew-options').classList.add('open');
+    return;
+  }
+  if (!department || !description || !start) return;
+
+  const newEntry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    department, crew: [...crew], description,
+    blocks: [{ start, end }],
+    completed: false,
+    manHours: null
+  };
+  entries.push(newEntry);
+  render();
+
+  try {
+    await apiPost({ action: 'addEntry', entry: newEntry });
+  } catch (err) {
+    console.error('Save failed', err);
+  }
+
+  if (activePendingId) {
+    const claimedId = activePendingId;
+    pendingTasks = pendingTasks.filter(t => t.id !== claimedId);
+    activePendingId = null;
+    renderPending();
+    try {
+      await apiPost({ action: 'deletePending', id: claimedId });
+    } catch (err) {
+      console.error('Delete failed', err);
+    }
+  }
+
+  crew = [];
+  document.querySelectorAll('#crew-options input').forEach(box => box.checked = false);
+  document.getElementById('crew-toggle').textContent = 'Select staff';
+  document.getElementById('crew-options').classList.remove('open');
+  renderChips();
+  e.target.reset();
+  document.getElementById('start-time').value = nowLocal();
+  render();
+});
+
+document.getElementById('start-time').value = nowLocal();
+loadEntries();
+loadPendingTasks();
+setInterval(loadPendingTasks, 20000);
+setInterval(loadEntries, 20000);
+</script>
+</body>
+</html>
