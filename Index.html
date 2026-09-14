@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request a Task</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1B1E20;
+    --panel: #24282B;
+    --panel-raised: #2C3134;
+    --line: #383E42;
+    --text: #EDEEF0;
+    --text-dim: #9AA1A6;
+    --steel: #5B8FAE;
+    --steel-dim: #24404F;
+    --amber: #F0A202;
+    --green: #6FA36E;
+    --green-dim: #2E4A2D;
+    --red: #C4573A;
+    --red-dim: #4A2A22;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif; font-size: 15px; line-height: 1.45;
+  }
+  h1, h2, .num { font-family: 'Barlow Condensed', sans-serif; }
+  #app { max-width: 520px; margin: 0 auto; padding-bottom: 48px; }
+
+  header {
+    position: sticky; top: 0; z-index: 20; background: var(--bg);
+    border-bottom: 1px solid var(--line); padding: 16px 16px 12px;
+  }
+  header h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: 0.2px; }
+  header .sub { color: var(--text-dim); font-size: 12.5px; margin-top: 2px; }
+
+  #panel { margin: 14px 16px 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+  #req-form { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+  .field label { display: block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; font-weight: 500; }
+  select, textarea, input[type=text] {
+    width: 100%; background: var(--panel-raised); border: 1px solid var(--line);
+    color: var(--text); border-radius: 5px; padding: 10px 11px; font-size: 15px;
+    font-family: 'Inter', sans-serif;
+  }
+  select:focus, textarea:focus, input:focus { outline: none; border-color: var(--steel); }
+  textarea { resize: vertical; min-height: 54px; }
+
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .type-opt {
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--panel-raised); border: 1px solid var(--line); border-radius: 5px;
+    padding: 12px 8px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-dim);
+  }
+  .type-opt.selected { background: var(--steel-dim); border-color: var(--steel); color: var(--text); }
+  .type-opt input { display: none; }
+
+  .yn-row { display: flex; gap: 8px; }
+  .yn-opt {
+    flex: 1; text-align: center; background: var(--panel-raised); border: 1px solid var(--line);
+    border-radius: 5px; padding: 10px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-dim);
+  }
+  .yn-opt.selected { background: var(--steel-dim); border-color: var(--steel); color: var(--text); }
+  .yn-opt input { display: none; }
+
+  .conditional { display: none; }
+  .conditional.show { display: block; }
+
+  .urgent-toggle {
+    display: flex; align-items: center; gap: 11px; background: var(--panel-raised);
+    border: 1px solid var(--line); border-radius: 5px; padding: 12px 13px; cursor: pointer;
+  }
+  .urgent-toggle.on { background: var(--red-dim); border-color: var(--red); }
+  .urgent-toggle input { display: none; }
+  .switch {
+    width: 38px; height: 21px; background: var(--line); border-radius: 20px;
+    position: relative; flex-shrink: 0; transition: background 0.15s ease;
+  }
+  .switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 17px; height: 17px;
+    background: var(--text); border-radius: 50%; transition: transform 0.15s ease;
+  }
+  .urgent-toggle.on .switch { background: var(--red); }
+  .urgent-toggle.on .switch::after { transform: translateX(17px); }
+  .urgent-label { font-size: 14.5px; font-weight: 600; }
+  .urgent-sub { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+
+  .submit-btn {
+    background: var(--steel); color: #12181C; border: none; border-radius: 5px;
+    padding: 13px; font-size: 15.5px; font-weight: 700; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.3px;
+  }
+  .submit-btn:active { opacity: 0.85; }
+
+  #confirm-toast {
+    display: none; margin: 12px 16px 0; background: var(--green-dim); border: 1px solid var(--green);
+    color: var(--green); border-radius: 5px; padding: 10px 13px; font-size: 13.5px; font-weight: 500;
+  }
+  #confirm-toast.show { display: block; }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Request a Task</h1>
+    <div class="sub">Send a task to Stacor Maintenance</div>
+  </header>
+
+  <div id="confirm-toast">Task sent to the maintenance queue.</div>
+
+  <div id="panel">
+    <form id="req-form">
+      <div class="field">
+        <label for="requested-by">Requested by</label>
+        <input type="text" id="requested-by" placeholder="Your name" required>
+      </div>
+
+      <div class="field">
+        <label for="department">Department</label>
+        <select id="department" required>
+          <option value="" disabled selected>Choose department</option>
+          <option>Wax</option>
+          <option>Petroleum Jelly</option>
+          <option>White Oil</option>
+          <option>Lubricants 1</option>
+          <option>Lubricants 2</option>
+          <option>Construction Chemicals</option>
+          <option>Loading Bay</option>
+          <option>Stacor 2 A Block</option>
+          <option>Stacor 2 B Block</option>
+          <option>General / Workshop</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>What needs attention</label>
+        <div class="type-grid" id="type-grid">
+          <label class="type-opt" data-value="Tank"><input type="radio" name="type" value="Tank">Tank</label>
+          <label class="type-opt" data-value="Motor"><input type="radio" name="type" value="Motor">Motor</label>
+          <label class="type-opt" data-value="Electrical"><input type="radio" name="type" value="Electrical">Electrical</label>
+          <label class="type-opt" data-value="Pipe/Valve"><input type="radio" name="type" value="Pipe/Valve">Pipe/Valve</label>
+          <label class="type-opt" data-value="Other"><input type="radio" name="type" value="Other">Other</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="description">Additional details (optional)</label>
+        <textarea id="description" placeholder="Anything the team should know"></textarea>
+      </div>
+
+      <div class="field conditional" id="tank-field">
+        <label>Is the tank empty?</label>
+        <div class="yn-row" id="tank-empty-row">
+          <label class="yn-opt" data-value="Yes"><input type="radio" name="tankEmpty" value="Yes">Yes</label>
+          <label class="yn-opt" data-value="No"><input type="radio" name="tankEmpty" value="No">No</label>
+        </div>
+      </div>
+
+      <div class="field conditional" id="other-field">
+        <label for="other-detail">Briefly describe it</label>
+        <input type="text" id="other-detail" placeholder="What needs attention">
+      </div>
+
+      <label class="urgent-toggle" id="urgent-toggle">
+        <input type="checkbox" id="urgent-check">
+        <span class="switch"></span>
+        <span>
+          <div class="urgent-label">Urgent to production needs</div>
+          <div class="urgent-sub">Flags this at the top of the maintenance queue</div>
+        </span>
+      </label>
+
+      <button type="submit" class="submit-btn">Send to maintenance</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// --- Connect this to your Google Apps Script Web App ---
+// Use the same deployed Web App URL as in the Job Log app.
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+
+if (API_URL.indexOf('PASTE_') === 0) {
+  document.body.insertAdjacentHTML('afterbegin',
+    '<div style="background:#C4573A;color:#fff;padding:10px 16px;font-size:13px;text-align:center;">Not connected — set API_URL in the code to your deployed Apps Script URL.</div>');
+}
+
+async function apiPost(payload) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error('Request failed: ' + res.status);
+  return res.json();
+}
+
+let selectedType = null;
+let selectedTankEmpty = null;
+
+document.querySelectorAll('#type-grid .type-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    selectedType = opt.dataset.value;
+    document.querySelectorAll('#type-grid .type-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    opt.querySelector('input').checked = true;
+
+    document.getElementById('tank-field').classList.toggle('show', selectedType === 'Tank');
+    document.getElementById('other-field').classList.toggle('show', selectedType === 'Other');
+  });
+});
+
+document.querySelectorAll('#tank-empty-row .yn-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    selectedTankEmpty = opt.dataset.value;
+    document.querySelectorAll('#tank-empty-row .yn-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    opt.querySelector('input').checked = true;
+  });
+});
+
+document.getElementById('urgent-toggle').addEventListener('click', (e) => {
+  const box = document.getElementById('urgent-check');
+  box.checked = !box.checked;
+  document.getElementById('urgent-toggle').classList.toggle('on', box.checked);
+});
+
+document.getElementById('req-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const department = document.getElementById('department').value;
+  const requestedBy = document.getElementById('requested-by').value.trim();
+  if (!requestedBy) {
+    alert('Please enter who is requesting this task.');
+    return;
+  }
+  if (!department || !selectedType) return;
+  if (selectedType === 'Tank' && !selectedTankEmpty) {
+    alert('Please answer whether the tank is empty.');
+    return;
+  }
+  const otherDetail = document.getElementById('other-detail').value.trim();
+  if (selectedType === 'Other' && !otherDetail) {
+    alert('Please briefly describe the task.');
+    return;
+  }
+
+  const task = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    department,
+    requestedBy,
+    type: selectedType,
+    tankEmpty: selectedType === 'Tank' ? selectedTankEmpty : null,
+    otherDetail: selectedType === 'Other' ? otherDetail : null,
+    description: document.getElementById('description').value.trim(),
+    urgent: document.getElementById('urgent-check').checked,
+    createdAt: new Date().toISOString()
+  };
+
+  const submitBtn = e.target.querySelector('.submit-btn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending...';
+
+  try {
+    await apiPost({ action: 'addPending', task });
+  } catch (err) {
+    console.error('Send failed', err);
+    alert('Could not send the task — check your connection and try again.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send to maintenance';
+    return;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Send to maintenance';
+
+  const toast = document.getElementById('confirm-toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+
+  e.target.reset();
+  selectedType = null;
+  selectedTankEmpty = null;
+  document.querySelectorAll('.type-opt, .yn-opt').forEach(o => o.classList.remove('selected'));
+  document.getElementById('tank-field').classList.remove('show');
+  document.getElementById('other-field').classList.remove('show');
+  document.getElementById('urgent-toggle').classList.remove('on');
+});
+</script>
+</body>
+</html>
